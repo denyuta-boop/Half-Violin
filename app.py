@@ -48,40 +48,45 @@ if df is not None:
         # 統計検定
         _, p_val = mannwhitneyu(d1, d2, alternative='two-sided')
        
-        # ==================== 描画 ====================
+               # ==================== 描画 ====================
         fig, ax = plt.subplots(figsize=(8, 7), dpi=300)
        
-        # ハーフバイオリン（正しい方法）
-        # 左側
-        sns.violinplot(data=pd.DataFrame({g1: d1}), x=[0]*len(d1), y=g1,
+        # === ハーフバイオリン（正しい左右配置）===
+        # 左側（g1）
+        left_df = pd.DataFrame({g1: d1})
+        sns.violinplot(data=left_df, x=np.full(len(d1), -0.3), y=g1,
                        color=color1, ax=ax, inner=None, cut=0, 
-                       density_norm='count', width=0.8)
+                       density_norm='count', width=0.6, linewidth=1.2)
         
-        # 右側
-        sns.violinplot(data=pd.DataFrame({g2: d2}), x=[0]*len(d2), y=g2,
+        # 右側（g2）
+        right_df = pd.DataFrame({g2: d2})
+        sns.violinplot(data=right_df, x=np.full(len(d2), 0.3), y=g2,
                        color=color2, ax=ax, inner=None, cut=0, 
-                       density_norm='count', width=0.8)
+                       density_norm='count', width=0.6, linewidth=1.2)
         
-        # 散布点（ジッター）
-        jitter = 0.08
-        ax.scatter(np.random.normal(-0.2, jitter, len(d1)), d1, 
-                   color=color1, alpha=0.5, s=25, edgecolor='white', linewidth=0.5)
-        ax.scatter(np.random.normal(0.2, jitter, len(d2)), d2, 
-                   color=color2, alpha=0.5, s=25, edgecolor='white', linewidth=0.5)
+        # === 散布点（左右にオフセット）===
+        jitter = 0.07
+        ax.scatter(np.random.normal(-0.3, jitter, len(d1)), d1,
+                   color=color1, alpha=0.55, s=28, edgecolor='white', linewidth=0.4)
+        ax.scatter(np.random.normal(0.3, jitter, len(d2)), d2,
+                   color=color2, alpha=0.55, s=28, edgecolor='white', linewidth=0.4)
         
-        # ボックスプロット
-        bp = ax.boxplot([d1, d2], positions=[-0.2, 0.2], widths=0.15,
-                        showfliers=False, patch_artist=True)
+        # === ボックスプロット ===
+        bp = ax.boxplot([d1, d2], positions=[-0.3, 0.3], widths=0.12,
+                        showfliers=False, patch_artist=True, 
+                        medianprops={'color': 'orange', 'linewidth': 2})
+        
         for patch, color in zip(bp['boxes'], [color1, color2]):
             patch.set_facecolor('none')
             patch.set_edgecolor('black')
+            patch.set_alpha(0.9)
         
-        # 装飾
-        ax.axvline(0, color="gray", linestyle="--", alpha=0.6)
+        # === 装飾 ===
+        ax.axvline(0, color="gray", linestyle="--", alpha=0.5, linewidth=1)
         ax.set_xticks([0])
         ax.set_xticklabels([f"{g1} vs {g2}\n(p = {p_val:.4f})"], 
                           fontsize=13, fontweight='bold')
-        ax.set_xlim(-0.9, 0.9)
+        ax.set_xlim(-0.85, 0.85)
         ax.set_title(plot_title, fontsize=16, pad=20)
         ax.set_ylabel(val_col)
         ax.set_xlabel("")
