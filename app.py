@@ -2,26 +2,24 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns  # ✅ これを追加しました
+import seaborn as sns
 from scipy.stats import mannwhitneyu
 import io
 
-# ページ設定
 st.set_page_config(layout="wide", page_title="Scientific Plot Generator Pro")
-
 st.title("📈 Scientific Plot Generator Pro")
-st.markdown("左右背中合わせのハーフバイオリン図を作成します。")
+st.markdown("**左右背中合わせのハーフバイオリン図**を作成します。")
 
-# --- サイドバー：データと設定 ---
+# --- サイドバー ---
 with st.sidebar:
     st.header("1. データ設定")
-    use_demo = st.checkbox("サンプルデータを使う (Tips Dataset)")
-    
+    use_demo = st.checkbox("サンプルデータを使う (Tips Dataset)", value=True)
+   
     if use_demo:
-        df = sns.load_dataset("tips") # ここでsnsを使用します
+        df = sns.load_dataset("tips")
         group_col = "time"
         val_col = "total_bill"
-        st.success("サンプルデータ(Tips)をロードしました")
+        st.success("✅ サンプルデータ(Tips)をロードしました")
     else:
         uploaded_file = st.file_uploader("CSVアップロード", type="csv")
         if uploaded_file:
@@ -41,46 +39,66 @@ with st.sidebar:
 if df is not None:
     groups = df[group_col].unique()
     if len(groups) != 2:
-        st.error("グループ列は必ず2つのカテゴリを含んでください。")
+        st.error("グループ列は**必ず2つのカテゴリ**を含んでください。")
     else:
-        g1, g2 = groups[0], groups[1]
-        d1 = df[df[group_col] == g1][val_col].values
-        d2 = df[df[group_col] == g2][val_col].values
-        
+        g1, g2 = sorted(groups)  # 安定させるためにsort
+        d1 = df[df[group_col] == g1][val_col].dropna().values
+        d2 = df[df[group_col] == g2][val_col].dropna().values
+       
         # 統計検定
-        _, p_val = mannwhitneyu(d1, d2)
+        _, p_val = mannwhitneyu(d1, d2, alternative='two-sided')
+       
+        # ==================== 描画 ====================
+        fig, ax = plt.subplots(figsize=(8, 7), dpi=300)
+       
+        # ハーフバイオリン（正しい方法）
+        # 左側
+        sns.violinplot(data=pd.DataFrame({g1: d1}), x=[0]*len(d1), y=g1,
+                       color=color1, ax=ax, inner=None, cut=0, 
+                       density_norm='count', width=0.8)
         
-        # 描画開始
-        fig, ax = plt.subplots(figsize=(7, 6))
+        # 右側
+        sns.violinplot(data=pd.DataFrame({g2: d2}), x=[0]*len(d2), y=g2,
+                       color=color2, ax=ax, inner=None, cut=0, 
+                       density_norm='count', width=0.8)
         
-        # --- 1. ハーフバイオリン描画（Seabornの機能を活用） ---
-        # data=df を削除し、直接 d1 と d2 の配列を渡します
-        sns.violinplot(x=[0]*len(d1), y=d1, color=color1, ax=ax, 
-                       inner=None, cut=0, side='left', width=1.0, alpha=0.6)
-        sns.violinplot(x=[0]*len(d2), y=d2, color=color2, ax=ax, 
-                       inner=None, cut=0, side='right', width=1.0, alpha=0.6)
-
-        # --- 2. 散布図とボックスプロット ---
-        # ストリッププロット（各サイドに配置）
-        ax.scatter(np.random.normal(0, 0.05, size=len(d1)) - 0.2, d1, color=color1, alpha=0.4, s=20)
-        ax.scatter(np.random.normal(0, 0.05, size=len(d2)) + 0.2, d2, color=color2, alpha=0.4, s=20)
+        # 散布点（ジッター）
+        jitter = 0.08
+        ax.scatter(np.random.normal(-0.2, jitter, len(d1)), d1, 
+                   color=color1, alpha=0.5, s=25, edgecolor='white', linewidth=0.5)
+        ax.scatter(np.random.normal(0.2, jitter, len(d2)), d2, 
+                   color=color2, alpha=0.5, s=25, edgecolor='white', linewidth=0.5)
         
-        # ボックスプロット（左右にオフセット）
-        ax.boxplot([d1, d2], positions=[-0.2, 0.2], widths=0.15, showfliers=False, 
-                   patch_artist=True, boxprops={'facecolor':'none', 'edgecolor':'black'})
-
-        # --- 装飾 ---
-        ax.axvline(0, color="gray", linestyle="--", alpha=0.5)
+        # ボックスプロット
+        bp = ax.boxplot([d1, d2], positions=[-0.2, 0.2], widths=0.15,
+                        showfliers=False, patch_artist=True)
+        for patch, color in zip(bp['boxes'], [color1, color2]):
+            patch.set_facecolor('none')
+            patch.set_edgecolor('black')
+        
+        # 装飾
+        ax.axvline(0, color="gray", linestyle="--", alpha=0.6)
         ax.set_xticks([0])
-        ax.set_xticklabels([f"{g1} vs {g2}\n(p={p_val:.4f})"], fontsize=12, fontweight='bold')
-        ax.set_xlim(-0.8, 0.8)
-        ax.set_title(plot_title, fontsize=14)
+        ax.set_xticklabels([f"{g1} vs {g2}\n(p = {p_val:.4f})"], 
+                          fontsize=13, fontweight='bold')
+        ax.set_xlim(-0.9, 0.9)
+        ax.set_title(plot_title, fontsize=16, pad=20)
+        ax.set_ylabel(val_col)
+        ax.set_xlabel("")
+        
+        # 凡例追加（任意）
+        # ax.legend([bp["boxes"][0], bp["boxes"][1]], [g1, g2], loc='upper right')
         
         st.pyplot(fig)
-        
-        # ダウンロード
+       
+        # ダウンロードボタン
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
-        st.download_button("PNGダウンロード", buf, "publication_plot.png", "image/png")
+        st.download_button(
+            label="📥 PNGダウンロード (Publication Quality)",
+            data=buf,
+            file_name="half_violin_plot.png",
+            mime="image/png"
+        )
 else:
-    st.info("サイドバーからサンプルを選択するか、CSVをアップロードしてください。")
+    st.info("👈 サイドバーからデータを選んでください")
