@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import mannwhitneyu
 import io
@@ -10,7 +9,7 @@ import io
 st.set_page_config(layout="wide", page_title="Scientific Plot Generator Pro")
 
 st.title("📈 Scientific Plot Generator Pro")
-st.markdown("論文品質の左右背中合わせハーフバイオリン図を作成します。")
+st.markdown("左右背中合わせのハーフバイオリン図を作成します。")
 
 # --- サイドバー：データと設定 ---
 with st.sidebar:
@@ -19,7 +18,7 @@ with st.sidebar:
     
     if use_demo:
         df = sns.load_dataset("tips")
-        group_col = "time" # デモ用に固定
+        group_col = "time"
         val_col = "total_bill"
         st.success("サンプルデータ(Tips)をロードしました")
     else:
@@ -48,9 +47,9 @@ if df is not None:
         d2 = df[df[group_col] == g2][val_col].values
         
         # 統計検定
-        stat, p_val = mannwhitneyu(d1, d2)
+        _, p_val = mannwhitneyu(d1, d2)
         
-        # 描画
+        # 描画開始
         fig, ax = plt.subplots(figsize=(7, 6))
         
         # 1. 左側(g1)の反転ハーフバイオリン
@@ -58,18 +57,21 @@ if df is not None:
         for pc in v1['bodies']:
             pc.set_facecolor(color1)
             pc.set_alpha(0.7)
+            # 頂点を左側に反転
             m = np.mean(pc.get_paths()[0].vertices[:, 0])
             pc.get_paths()[0].vertices[:, 0] = 2 * m - pc.get_paths()[0].vertices[:, 0]
-            
+        
         # 2. 右側(g2)のハーフバイオリン
         v2 = ax.violinplot(d2, positions=[0], vert=True, widths=0.8, showextrema=False)
         for pc in v2['bodies']:
             pc.set_facecolor(color2)
             pc.set_alpha(0.7)
 
-        # 3. ストリップとボックス (オフセット配置)
-        sns.stripplot(x=np.zeros(len(d1)) - 0.1, y=d1, color=color1, alpha=0.5, jitter=0.05, ax=ax)
-        sns.stripplot(x=np.zeros(len(d2)) + 0.1, y=d2, color=color2, alpha=0.5, jitter=0.05, ax=ax)
+        # 3. 散布図とボックスプロット (左右にオフセット配置)
+        # 左グループ(d1)を左へ、右グループ(d2)を右へ
+        ax.scatter(np.random.normal(0, 0.03, size=len(d1)) - 0.2, d1, color=color1, alpha=0.4, s=20)
+        ax.scatter(np.random.normal(0, 0.03, size=len(d2)) + 0.2, d2, color=color2, alpha=0.4, s=20)
+        
         ax.boxplot([d1, d2], positions=[-0.2, 0.2], widths=0.1, showfliers=False, 
                    patch_artist=True, boxprops={'facecolor':'white', 'edgecolor':'black'})
 
@@ -78,6 +80,7 @@ if df is not None:
         ax.set_xticklabels([f"{g1} vs {g2}\n(p={p_val:.4f})"], fontsize=12, fontweight='bold')
         ax.set_title(plot_title, fontsize=14)
         ax.axvline(0, color="gray", linestyle="--", alpha=0.5)
+        ax.set_xlim(-0.6, 0.6)
         
         st.pyplot(fig)
         
