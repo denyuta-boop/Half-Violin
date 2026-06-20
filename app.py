@@ -54,10 +54,10 @@ if df is not None:
         fig, ax = plt.subplots(figsize=(7, 6))
         
         # --- 1. ハーフバイオリン描画（Seabornの機能を活用） ---
-        # sideを指定することで確実にハーフにします
-        sns.violinplot(data=df, x=[0]*len(d1), y=d1, color=color1, ax=ax, 
+        # data=df を削除し、直接 d1 と d2 の配列を渡します
+        sns.violinplot(x=[0]*len(d1), y=d1, color=color1, ax=ax, 
                        inner=None, cut=0, side='left', width=1.0, alpha=0.6)
-        sns.violinplot(data=df, x=[0]*len(d2), y=d2, color=color2, ax=ax, 
+        sns.violinplot(x=[0]*len(d2), y=d2, color=color2, ax=ax, 
                        inner=None, cut=0, side='right', width=1.0, alpha=0.6)
 
         # --- 2. 散布図とボックスプロット ---
